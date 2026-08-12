@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>體態紀錄站</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+  :root{
+    --bg:#EEF1EC;
+    --paper:#FBFBF9;
+    --ink:#1B2420;
+    --ink-soft:#5B6560;
+    --line:#DADFD8;
+    --teal:#2F6F62;
+    --teal-soft:#E4EFEB;
+    --coral:#C1583A;
+    --coral-soft:#F6E7E0;
+    --amber:#B8862F;
+    --radius:14px;
+    --shadow:0 1px 2px rgba(27,36,32,0.04), 0 8px 24px rgba(27,36,32,0.05);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:80px;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 20px;}
+
+  header.top{
+    padding:44px 20px 28px;
+    border-bottom:1px solid var(--line);
+    background:
+      radial-gradient(600px 200px at 85% -40%, rgba(47,111,98,0.10), transparent);
+  }
+  header.top .inner{max-width:1040px;margin:0 auto;}
+  .eyebrow{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:12px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--teal); font-weight:600; margin-bottom:10px;
+  }
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:clamp(28px,4vw,40px);
+    margin:0 0 8px; letter-spacing:-0.01em; font-weight:700;
+  }
+  .sub{color:var(--ink-soft); font-size:15px; max-width:52ch;}
+
+  nav.tabs{
+    position:sticky; top:0; z-index:20;
+    background:rgba(238,241,236,0.92); backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--line);
+  }
+  nav.tabs .inner{
+    max-width:1040px;margin:0 auto;padding:0 20px;
+    display:flex; gap:4px; overflow-x:auto;
+  }
+  nav.tabs button{
+    appearance:none; border:none; background:none; cursor:pointer;
+    font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:14px;
+    color:var(--ink-soft); padding:16px 14px; white-space:nowrap;
+    border-bottom:2px solid transparent;
+  }
+  nav.tabs button.active{color:var(--ink); border-bottom-color:var(--teal);}
+
+  section.panel{padding:36px 0; display:none;}
+  section.panel.active{display:block;}
+  h2.section-title{
+    font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:700;
+    margin:0 0 4px;
+  }
+  p.section-desc{color:var(--ink-soft); font-size:13.5px; margin:0 0 20px;}
+
+  .card{
+    background:var(--paper); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:var(--shadow);
+  }
+  .card-pad{padding:22px;}
+
+  form#entry-form{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
+    gap:14px;
+  }
+  .field{display:flex; flex-direction:column; gap:6px;}
+  .field label{font-size:12px; color:var(--ink-soft); font-weight:600;}
+  .field .unit{font-weight:400; color:#9AA39C;}
+  .field input{
+    font-family:'IBM Plex Mono',monospace; font-size:15px;
+    padding:10px 11px; border:1px solid var(--line); border-radius:9px;
+    background:#fff; color:var(--ink); outline:none;
+  }
+  .field input:focus{border-color:var(--teal); box-shadow:0 0 0 3px var(--teal-soft);}
+  .form-actions{
+    grid-column:1/-1; display:flex; gap:10px; align-items:center; margin-top:4px;
+  }
+  button.primary{
+    appearance:none; border:none; cursor:pointer;
+    background:var(--teal); color:#fff; font-family:'Space Grotesk',sans-serif;
+    font-weight:600; font-size:14px; padding:11px 20px; border-radius:9px;
+  }
+  button.primary:hover{background:#28584e;}
+  button.ghost{
+    appearance:none; border:1px solid var(--line); cursor:pointer; background:#fff;
+    color:var(--ink-soft); font-family:'Space Grotesk',sans-serif; font-weight:600;
+    font-size:13px; padding:10px 16px; border-radius:9px;
+  }
+  #form-status{font-size:13px; color:var(--teal); font-weight:600;}
+
+  .table-scroll{overflow-x:auto; margin-top:22px; border:1px solid var(--line); border-radius:var(--radius);}
+  table{width:100%; border-collapse:collapse; background:var(--paper); font-size:13.5px;}
+  thead th{
+    text-align:right; font-family:'Space Grotesk',sans-serif; font-weight:600;
+    font-size:11.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-soft);
+    padding:12px 12px; border-bottom:1px solid var(--line); white-space:nowrap;
+  }
+  thead th:first-child, tbody td:first-child{text-align:left;}
+  tbody td{
+    padding:11px 12px; border-bottom:1px solid var(--line); text-align:right;
+    font-family:'IBM Plex Mono',monospace; white-space:nowrap;
+  }
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:#F4F6F2;}
+  .row-actions{display:flex; gap:6px; justify-content:flex-end;}
+  .icon-btn{
+    appearance:none; border:1px solid var(--line); background:#fff; cursor:pointer;
+    border-radius:7px; padding:5px 9px; font-size:12px; font-family:'Inter',sans-serif; color:var(--ink-soft);
+  }
+  .icon-btn:hover{border-color:var(--teal); color:var(--teal);}
+  .icon-btn.danger:hover{border-color:var(--coral); color:var(--coral);}
+  .empty-state{padding:36px 20px; text-align:center; color:var(--ink-soft); font-size:14px;}
+
+  .stat-grid{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px;
+  }
+  .stat-card{
+    background:var(--paper); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px 18px 16px; box-shadow:var(--shadow);
+  }
+  .stat-label{font-size:12.5px; color:var(--ink-soft); font-weight:600; margin-bottom:8px;}
+  .stat-value{font-family:'IBM Plex Mono',monospace; font-size:26px; font-weight:600; line-height:1;}
+  .stat-value.pos{color:var(--teal);}
+  .stat-value.neg{color:var(--coral);}
+  .stat-value.flat{color:var(--ink-soft);}
+  .stat-note{font-size:12px; color:var(--ink-soft); margin-top:6px;}
+
+  .section-block{margin-top:34px;}
+  .section-block h3{font-family:'Space Grotesk',sans-serif; font-size:15px; margin:0 0 12px;}
+
+  .compare-row{display:flex; align-items:center; gap:22px; flex-wrap:wrap;}
+  .compare-item{flex:1; min-width:160px;}
+  .compare-item .stat-value{font-family:'IBM Plex Mono',monospace; font-size:28px; font-weight:600; color:var(--ink);}
+  .compare-sign{font-family:'Space Grotesk',sans-serif; font-weight:700; color:var(--ink-soft); font-size:14px;}
+  .compare-diff{
+    margin-top:20px; padding-top:18px; border-top:1px solid var(--line);
+  }
+  .compare-diff .stat-value{font-size:24px;}
+
+  .goal-form{display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;}
+  .goal-progress-wrap{margin-top:22px;}
+  .bar-track{
+    width:100%; height:10px; background:#E4E7E0; border-radius:99px; overflow:hidden;
+    border:1px solid var(--line);
+  }
+  .bar-fill{height:100%; background:linear-gradient(90deg,var(--teal),#4C9686); border-radius:99px; transition:width .4s ease;}
+  .bar-labels{display:flex; justify-content:space-between; font-size:12px; color:var(--ink-soft); margin-top:6px; font-family:'IBM Plex Mono',monospace;}
+
+  .chart-controls{display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:18px;}
+  .seg{display:inline-flex; border:1px solid var(--line); border-radius:9px; overflow:hidden;}
+  .seg button{
+    appearance:none; border:none; background:#fff; cursor:pointer; padding:8px 14px;
+    font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:var(--ink-soft);
+    border-right:1px solid var(--line);
+  }
+  .seg button:last-child{border-right:none;}
+  .seg button.active{background:var(--teal); color:#fff;}
+  select.metric-select{
+    font-family:'IBM Plex Mono',monospace; font-size:13px; padding:9px 12px;
+    border:1px solid var(--line); border-radius:9px; background:#fff; color:var(--ink);
+  }
+  .chart-box{height:340px; padding:6px; position:relative;}
+  .chart-box canvas{width:100% !important;height:100% !important;}
+  .chart-message{height:100%;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--ink-soft);font-size:14px;padding:24px;}
+
+  .mini-table{width:100%; border-collapse:collapse; font-size:13px;}
+  .mini-table th{
+    text-align:right; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:11px;
+    text-transform:uppercase; letter-spacing:.03em; color:var(--ink-soft); padding:9px 10px;
+    border-bottom:1px solid var(--line);
+  }
+  .mini-table th:first-child, .mini-table td:first-child{text-align:left;}
+  .mini-table td{padding:9px 10px; border-bottom:1px solid var(--line); text-align:right; font-family:'IBM Plex Mono',monospace;}
+  .delta.pos{color:var(--teal);}
+  .delta.neg{color:var(--coral);}
+
+  footer{padding:30px 20px; text-align:center; color:var(--ink-soft); font-size:12px;}
+  @media (max-width:640px){
+    form#entry-form{grid-template-columns:repeat(2,1fr);}
+    .chart-box{height:300px;width:100%;}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="inner">
+    <div class="eyebrow">身體組成追蹤</div>
+    <h1>體態紀錄站</h1>
+    <p class="sub">每天記一筆,長期看得見。追蹤體重、體脂、骨骼肌與代謝數據,和第一筆紀錄比,和目標比。</p>
+  </div>
+</header>
+
+<nav class="tabs">
+  <div class="inner">
+    <button class="tab-btn active" data-tab="daily">每日紀錄</button>
+    <button class="tab-btn" data-tab="goal">目標設定</button>
+    <button class="tab-btn" data-tab="analysis">數據分析</button>
+    <button class="tab-btn" data-tab="trend">趨勢圖</button>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <section class="panel active" id="panel-daily">
+    <h2 class="section-title">每日紀錄</h2>
+    <p class="section-desc">輸入當天量測數據。同一天重複輸入會更新原本的紀錄。</p>
+
+    <div class="card card-pad">
+      <form id="entry-form">
+        <div class="field">
+          <label for="f-date">日期</label>
+          <input type="date" id="f-date" required>
+        </div>
+        <div class="field"><label>體重 <span class="unit">kg</span></label><input type="number" step="0.1" id="f-weight"></div>
+        <div class="field"><label>BMI</label><input type="number" step="0.1" id="f-bmi"></div>
+        <div class="field"><label>體脂率 <span class="unit">%</span></label><input type="number" step="0.1" id="f-bodyFat"></div>
+        <div class="field"><label>骨骼肌 <span class="unit">kg</span></label><input type="number" step="0.1" id="f-muscle"></div>
+        <div class="field"><label>基礎代謝 <span class="unit">kcal</span></label><input type="number" step="1" id="f-bmr"></div>
+        <div class="field"><label>身體年齡 <span class="unit">歲</span></label><input type="number" step="1" id="f-bodyAge"></div>
+        <div class="field"><label>內臟脂肪</label><input type="number" step="1" id="f-visceralFat"></div>
+        <div class="field"><label>脂肪重量 <span class="unit">kg</span></label><input type="number" step="0.1" id="f-fatWeight"></div>
+        <div class="form-actions">
+          <button type="submit" class="primary" id="submit-btn">新增紀錄</button>
+          <button type="button" class="ghost" id="cancel-edit" style="display:none;">取消編輯</button>
+          <span id="form-status"></span>
+        </div>
+      </form>
+    </div>
+
+    <div class="section-block">
+      <h3>批次匯入(貼上表格資料)</h3>
+      <div class="card card-pad">
+        <p class="section-desc" style="margin-bottom:12px;">從 Excel 或訊息複製整段表格貼上即可,欄位順序:日期、體重、BMI、體脂率、骨骼肌、基礎代謝、身體年齡、內臟脂肪、脂肪重量(以 Tab 分隔)。相同日期會覆蓋原本的紀錄。</p>
+        <textarea id="import-text" rows="6"
+          style="width:100%; font-family:'IBM Plex Mono',monospace; font-size:12.5px; padding:12px; border:1px solid var(--line); border-radius:9px; resize:vertical; background:#fff; color:var(--ink);">日期	體重(kg)	BMI	體脂率(%)	骨骼肌(kg)	基礎代謝(kcal)	身體年齡	內臟脂肪	脂肪重量(kg)
+2026/06/02	79.6	28.9	35.2	24.9	1553	47	8	28.0
+2026/06/11	78.3	28.4	34.7	25.0	1536	46	8	27.2
+2026/06/17	78.5	28.5	34.8	25.0	1538	46	8	27.3
+2026/06/24	76.5	27.8	34.6	24.9	1508	45	8	26.5
+2026/07/01	77.1	28.0	33.3	25.9	1527	44	8	25.7
+2026/07/07	75.9	27.5	33.1	25.8	1509	44	7	25.1
+2026/07/08	75.7	27.5	33.6	25.5	1503	44	7	25.4
+2026/07/14	76.1	27.6	34.6	24.9	1502	45	7	26.3
+2026/07/15	77.0	27.9	33.8	25.5	1522	45	8	26.0
+2026/07/20	75.3	27.3	33.4	25.6	1498	44	7	25.2
+2026/07/22	76.2	27.3	33.1	25.9	1515	44	7	25.2
+2026/07/29	75.2	27.3	33.6	25.5	1495	44	7	25.3
+2026/08/03	75.4	27.3	33.6	25.4	1498	44	7	25.3
+2026/08/06	74.5	27.0	32.8	25.9	1489	43	7	24.4</textarea>
+        <div style="display:flex; gap:10px; align-items:center; margin-top:12px;">
+          <button type="button" class="primary" id="import-btn">匯入資料</button>
+          <span id="import-status" style="font-size:13px; color:var(--teal); font-weight:600;"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>日期</th><th>體重</th><th>BMI</th><th>體脂率</th><th>骨骼肌</th>
+            <th>基礎代謝</th><th>身體年齡</th><th>內臟脂肪</th><th>脂肪重量</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="entries-tbody"></tbody>
+      </table>
+      <div class="empty-state" id="table-empty" style="display:none;">還沒有任何紀錄,新增第一筆開始追蹤吧。</div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-goal">
+    <h2 class="section-title">目標設定</h2>
+    <p class="section-desc">設定目標體重,對照最新一筆紀錄與起始紀錄,看看進度到哪裡了。</p>
+
+    <div class="card card-pad">
+      <div class="goal-form">
+        <div class="field">
+          <label>目標體重 <span class="unit">kg</span></label>
+          <input type="number" step="0.1" id="f-goal-weight" style="width:140px;">
+        </div>
+        <button class="primary" id="save-goal-btn">儲存目標</button>
+        <span id="goal-status" style="font-size:13px;color:var(--teal);font-weight:600;"></span>
+      </div>
+
+      <div class="goal-progress-wrap" id="goal-progress-wrap" style="display:none;">
+        <div class="stat-grid" style="margin-bottom:18px;">
+          <div class="stat-card">
+            <div class="stat-label">目前體重</div>
+            <div class="stat-value mono" id="goal-current">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">目標體重</div>
+            <div class="stat-value mono" id="goal-target">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">尚需減少</div>
+            <div class="stat-value mono" id="goal-remaining">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">達成率</div>
+            <div class="stat-value mono" id="goal-percent">—</div>
+          </div>
+        </div>
+        <div class="bar-track"><div class="bar-fill" id="goal-bar" style="width:0%;"></div></div>
+        <div class="bar-labels">
+          <span id="goal-bar-start">起始 —</span>
+          <span id="goal-bar-end">目標 —</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-analysis">
+    <h2 class="section-title">數據分析</h2>
+    <p class="section-desc">與第一筆紀錄相比的累積變化,以及每月的統計摘要。</p>
+
+    <div class="section-block">
+      <h3>累積變化(相較第一筆紀錄)</h3>
+      <div class="stat-grid" id="cumulative-grid"></div>
+    </div>
+
+    <div class="section-block" id="compare-block" style="display:none;">
+      <h3>脂肪+肌肉減少 vs. 體重減少</h3>
+      <div class="card card-pad">
+        <div class="compare-row">
+          <div class="compare-item">
+            <div class="stat-label">脂肪減少 + 肌肉減少</div>
+            <div class="stat-value" id="cmp-combined">—</div>
+          </div>
+          <div class="compare-sign">vs</div>
+          <div class="compare-item">
+            <div class="stat-label">體重減少</div>
+            <div class="stat-value" id="cmp-weight">—</div>
+          </div>
+        </div>
+        <div class="compare-diff" id="cmp-diff-wrap">
+          <div class="stat-label">相差</div>
+          <div class="stat-value" id="cmp-diff">—</div>
+          <div class="stat-note" id="cmp-diff-note"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-block">
+      <h3>月統計</h3>
+      <div class="card">
+        <div class="table-scroll" style="border:none;">
+          <table class="mini-table" id="monthly-table">
+            <thead>
+              <tr><th>月份</th><th>筆數</th><th>體重變化</th><th>體脂變化</th><th>骨骼肌變化</th><th>脂肪重量變化</th></tr>
+            </thead>
+            <tbody id="monthly-tbody"></tbody>
+          </table>
+          <div class="empty-state" id="monthly-empty" style="display:none;">資料不足,無法計算月統計。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-trend">
+    <h2 class="section-title">趨勢圖</h2>
+    <p class="section-desc">選擇指標與時間單位,查看長期變化曲線。</p>
+
+    <div class="card card-pad">
+      <div class="chart-controls">
+        <div class="seg" id="group-seg">
+          <button data-group="day" class="active">每日</button>
+          <button data-group="month">每月</button>
+          <button data-group="year">每年</button>
+        </div>
+        <select class="metric-select" id="metric-select"></select>
+      </div>
+      <div class="chart-box"><canvas id="trend-chart"></canvas></div>
+    </div>
+
+    <div class="section-block">
+      <h3>體重 / 脂肪重量 / 骨骼肌 趨勢比較</h3>
+      <p class="section-desc">三條線同時比較,方便觀察體重下降時,主要是脂肪減少還是肌肉流失。</p>
+      <div class="card card-pad">
+        <div class="chart-box"><canvas id="compare-chart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section-block">
+      <h3>月統計圖表摘要</h3>
+      <div class="card">
+        <div class="table-scroll" style="border:none;">
+          <table class="mini-table" id="monthly-table-2">
+            <thead>
+              <tr><th>月份</th><th>平均體重</th><th>平均體脂率</th><th>平均骨骼肌</th></tr>
+            </thead>
+            <tbody id="monthly-tbody-2"></tbody>
+          </table>
+          <div class="empty-state" id="monthly-empty-2" style="display:none;">資料不足。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-block">
+      <h3>年統計</h3>
+      <div class="card">
+        <div class="table-scroll" style="border:none;">
+          <table class="mini-table" id="yearly-table">
+            <thead>
+              <tr><th>年份</th><th>筆數</th><th>體重變化</th><th>體脂變化</th><th>骨骼肌變化</th><th>脂肪重量變化</th></tr>
+            </thead>
+            <tbody id="yearly-tbody"></tbody>
+          </table>
+          <div class="empty-state" id="yearly-empty" style="display:none;">資料不足,無法計算年統計。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer>資料儲存在目前瀏覽器中，不會上傳至伺服器。更換瀏覽器、裝置或清除網站資料後，紀錄可能遺失。</footer>
+
+<script>
+(function(){
+  const FIELDS = [
+    {key:'weight',     label:'體重',     unit:'kg',   decimals:1},
+    {key:'bmi',        label:'BMI',      unit:'',     decimals:1},
+    {key:'bodyFat',    label:'體脂率',   unit:'%',    decimals:1},
+    {key:'muscle',     label:'骨骼肌',   unit:'kg',   decimals:1},
+    {key:'bmr',        label:'基礎代謝', unit:'kcal', decimals:0},
+    {key:'bodyAge',    label:'身體年齡', unit:'歲',   decimals:0},
+    {key:'visceralFat',label:'內臟脂肪', unit:'',     decimals:0},
+    {key:'fatWeight',  label:'脂肪重量', unit:'kg',   decimals:1},
+  ];
+  const FIELD_MAP = Object.fromEntries(FIELDS.map(f=>[f.key,f]));
+
+  let entries = [];
+  let goal = null;
+  let editingDate = null;
+  let chart = null;
+  let groupMode = 'day';
+  let metricKey = 'weight';
+
+  const $ = (id)=>document.getElementById(id);
+
+  // 儲存層:優先使用平台的 window.storage(持久化到帳號);
+  // 若不存在(例如直接以本機檔案開啟),自動改用瀏覽器 localStorage,確保資料不會遺失。
+  const cloudStorage = (typeof window!=='undefined' && window.storage) ? window.storage : null;
+  async function storageGet(key){
+    if(cloudStorage){
+      try{ return await cloudStorage.get(key); }catch(e){ return null; }
+    }
+    try{
+      const v = localStorage.getItem('body-log:'+key);
+      return v!==null ? {key, value:v} : null;
+    }catch(e){ return null; }
+  }
+  async function storageSet(key, value){
+    if(cloudStorage){
+      try{ return await cloudStorage.set(key, value); }catch(e){ return null; }
+    }
+    try{
+      localStorage.setItem('body-log:'+key, value);
+      return {key, value};
+    }catch(e){ return null; }
+  }
+
+  async function loadData(){
+    try{
+      const r = await storageGet('entries');
+      entries = r ? JSON.parse(r.value) : [];
+    }catch(e){ entries = []; }
+    try{
+      const r = await storageGet('goal');
+      goal = r ? JSON.parse(r.value) : null;
+    }catch(e){ goal = null; }
+    entries.sort((a,b)=> a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+  }
+  async function saveEntries(){
+    try{ await storageSet('entries', JSON.stringify(entries)); }
+    catch(e){ console.error('save entries failed', e); }
+  }
+  async function saveGoal(){
+    try{ await storageSet('goal', JSON.stringify(goal)); }
+    catch(e){ console.error('save goal failed', e); }
+  }
+
+  function fmt(val, decimals, unit){
+    if(val===null || val===undefined || val==='' || isNaN(val)) return '—';
+    return Number(val).toFixed(decimals) + (unit? ' '+unit : '');
+  }
+  function fmtDelta(val, decimals, unit){
+    if(val===null || val===undefined || isNaN(val)) return {text:'—', cls:'flat'};
+    const rounded = Number(val.toFixed(decimals));
+    const sign = rounded > 0 ? '+' : '';
+    return {text: sign + rounded.toFixed(decimals) + (unit? ' '+unit:''), cls: rounded===0?'flat':(rounded>0?'pos':'neg')};
+  }
+  function monthKey(d){ return d.slice(0,7); }
+  function yearKey(d){ return d.slice(0,4); }
+
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      $('panel-'+btn.dataset.tab).classList.add('active');
+      if(btn.dataset.tab==='trend'){
+        requestAnimationFrame(()=>requestAnimationFrame(()=>{ renderChart(); renderCompareChart(); }));
+      }
+    });
+  });
+
+  $('f-date').valueAsDate = new Date();
+
+  $('entry-form').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const date = $('f-date').value;
+    if(!date) return;
+    const rec = {date};
+    FIELDS.forEach(f=>{
+      const v = $('f-'+f.key).value;
+      rec[f.key] = v==='' ? null : Number(v);
+    });
+
+    if(editingDate && editingDate !== date){
+      entries = entries.filter(en=>en.date!==editingDate);
+    }
+    const idx = entries.findIndex(en=>en.date===date);
+    let statusMsg = '已新增';
+    if(idx>=0){ entries[idx]=rec; statusMsg='已更新該日期紀錄'; }
+    else { entries.push(rec); }
+    entries.sort((a,b)=> a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+
+    await saveEntries();
+    resetForm();
+    $('form-status').textContent = statusMsg;
+    setTimeout(()=>$('form-status').textContent='', 2500);
+    renderAll();
+  });
+
+  $('cancel-edit').addEventListener('click', resetForm);
+
+  function resetForm(){
+    editingDate = null;
+    $('entry-form').reset();
+    $('f-date').valueAsDate = new Date();
+    $('submit-btn').textContent = '新增紀錄';
+    $('cancel-edit').style.display = 'none';
+  }
+
+  function editEntry(date){
+    const en = entries.find(e=>e.date===date);
+    if(!en) return;
+    editingDate = date;
+    $('f-date').value = en.date;
+    FIELDS.forEach(f=>{ $('f-'+f.key).value = (en[f.key]===null||en[f.key]===undefined) ? '' : en[f.key]; });
+    $('submit-btn').textContent = '儲存修改';
+    $('cancel-edit').style.display = 'inline-block';
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  async function deleteEntry(date){
+    if(!confirm('確定要刪除 '+date+' 的紀錄嗎?')) return;
+    entries = entries.filter(e=>e.date!==date);
+    await saveEntries();
+    renderAll();
+  }
+
+  function parseImportText(text){
+    const lines = text.split(/\r?\n/);
+    const results = [];
+    const keys = ['weight','bmi','bodyFat','muscle','bmr','bodyAge','visceralFat','fatWeight'];
+    lines.forEach(line=>{
+      if(!line.trim()) return;
+      const parts = line.split('\t').map(p=>p.trim());
+      if(parts.length < 2) return;
+      const rawDate = parts[0];
+      const m = rawDate.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+      if(!m) return; // 略過標題列或格式不符的列
+      const date = m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
+      const rec = {date};
+      keys.forEach((k,i)=>{
+        const v = parts[i+1];
+        const n = (v===undefined || v==='') ? null : Number(v);
+        rec[k] = (n===null || isNaN(n)) ? null : n;
+      });
+      results.push(rec);
+    });
+    return results;
+  }
+
+  $('import-btn').addEventListener('click', async ()=>{
+    const parsed = parseImportText($('import-text').value);
+    const statusEl = $('import-status');
+    if(!parsed.length){
+      statusEl.textContent = '沒有偵測到有效的資料列,請確認格式。';
+      statusEl.style.color = 'var(--coral)';
+      return;
+    }
+    parsed.forEach(rec=>{
+      const idx = entries.findIndex(en=>en.date===rec.date);
+      if(idx>=0) entries[idx]=rec; else entries.push(rec);
+    });
+    entries.sort((a,b)=> a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+    await saveEntries();
+    statusEl.style.color = 'var(--teal)';
+    statusEl.textContent = `已匯入 ${parsed.length} 筆紀錄`;
+    $('import-text').value = '';
+    renderAll();
+  });
+
+  function renderTable(){
+    const tbody = $('entries-tbody');
+    tbody.innerHTML = '';
+    const rows = [...entries].reverse();
+    $('table-empty').style.display = rows.length? 'none':'block';
+    rows.forEach(en=>{
+      const tr = document.createElement('tr');
+      let cells = `<td>${en.date}</td>`;
+      FIELDS.forEach(f=>{ cells += `<td>${fmt(en[f.key], f.decimals, '')}</td>`; });
+      cells += `<td><div class="row-actions">
+        <button class="icon-btn" data-action="edit" data-date="${en.date}">編輯</button>
+        <button class="icon-btn danger" data-action="del" data-date="${en.date}">刪除</button>
+      </div></td>`;
+      tr.innerHTML = cells;
+      tbody.appendChild(tr);
+    });
+  }
+  $('entries-tbody').addEventListener('click', (e)=>{
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    const date = btn.dataset.date;
+    if(btn.dataset.action==='edit') editEntry(date);
+    if(btn.dataset.action==='del') deleteEntry(date);
+  });
+
+  $('save-goal-btn').addEventListener('click', async ()=>{
+    const v = $('f-goal-weight').value;
+    if(v===''){ return; }
+    goal = {weight:Number(v)};
+    await saveGoal();
+    $('goal-status').textContent = '已儲存目標';
+    setTimeout(()=>$('goal-status').textContent='', 2000);
+    renderGoal();
+  });
+
+  function renderGoal(){
+    if(goal) $('f-goal-weight').value = goal.weight;
+    if(!goal || !entries.length){
+      $('goal-progress-wrap').style.display = 'none';
+      return;
+    }
+    $('goal-progress-wrap').style.display = 'block';
+    const first = entries[0];
+    const latest = entries[entries.length-1];
+    const current = latest.weight;
+    const target = goal.weight;
+
+    $('goal-current').textContent = fmt(current,1,'kg');
+    $('goal-target').textContent = fmt(target,1,'kg');
+
+    if(current===null || current===undefined){
+      $('goal-remaining').textContent='—';
+      $('goal-percent').textContent='—';
+      $('goal-bar').style.width='0%';
+      return;
+    }
+    const remaining = current - target;
+    const remEl = $('goal-remaining');
+    if(Math.abs(remaining) < 0.05){
+      remEl.textContent = '已達成'; remEl.className='stat-value mono pos';
+    } else if(remaining > 0){
+      remEl.textContent = '-'+remaining.toFixed(1)+' kg'; remEl.className='stat-value mono neg';
+    } else {
+      remEl.textContent = '+'+Math.abs(remaining).toFixed(1)+' kg (已超過目標)'; remEl.className='stat-value mono pos';
+    }
+
+    let percent = 0;
+    const startW = first.weight;
+    if(startW!==null && startW!==undefined && startW !== target){
+      percent = ((startW - current) / (startW - target)) * 100;
+      percent = Math.max(0, Math.min(100, percent));
+    } else if (startW === target){
+      percent = 100;
+    }
+    $('goal-percent').textContent = percent.toFixed(0)+'%';
+    $('goal-percent').className = 'stat-value mono ' + (percent>=100?'pos':'flat');
+    $('goal-bar').style.width = percent+'%';
+    $('goal-bar-start').textContent = '起始 '+fmt(startW,1,'kg');
+    $('goal-bar-end').textContent = '目標 '+fmt(target,1,'kg');
+  }
+
+  function renderCumulative(){
+    const grid = $('cumulative-grid');
+    const compareBlock = $('compare-block');
+    grid.innerHTML = '';
+    if(entries.length < 2){
+      grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;">至少需要兩筆紀錄才能計算累積變化。</div>';
+      compareBlock.style.display = 'none';
+      return;
+    }
+    const first = entries[0];
+    const latest = entries[entries.length-1];
+
+    function loss(key){
+      const a=first[key], b=latest[key];
+      if(a===null||a===undefined||b===null||b===undefined) return null;
+      return a - b;
+    }
+    const weightLoss = loss('weight');
+    const fatLoss = loss('fatWeight');
+    const muscleLoss = loss('muscle');
+    const combined = (fatLoss!==null && muscleLoss!==null) ? fatLoss + muscleLoss : null;
+
+    const cards = [
+      {label:'累積減重', val:weightLoss, decimals:1, unit:'kg'},
+      {label:'累積脂肪減少', val:fatLoss, decimals:1, unit:'kg'},
+      {label:'累積肌肉變化', val:muscleLoss, decimals:1, unit:'kg', muscle:true},
+    ];
+    cards.forEach(c=>{
+      const div = document.createElement('div');
+      div.className='stat-card';
+      let valText, cls;
+      if(c.val===null){ valText='—'; cls='flat'; }
+      else {
+        const rounded = Number(c.val.toFixed(c.decimals));
+        valText = (rounded>=0? '減少 ':'增加 ') + Math.abs(rounded).toFixed(c.decimals)+' '+c.unit;
+        if(c.muscle){
+          cls = rounded>0 ? 'neg' : (rounded<0 ? 'pos' : 'flat');
+        } else {
+          cls = rounded>0 ? 'pos' : (rounded<0 ? 'neg' : 'flat');
+        }
+      }
+      div.innerHTML = `<div class="stat-label">${c.label}</div><div class="stat-value ${cls}">${valText}</div>`;
+      grid.appendChild(div);
+    });
+
+    // 脂肪+肌肉減少 vs 體重減少 比較
+    if(combined===null || weightLoss===null){
+      compareBlock.style.display = 'none';
+    } else {
+      compareBlock.style.display = 'block';
+      const combRounded = Number(combined.toFixed(1));
+      const weightRounded = Number(weightLoss.toFixed(1));
+      $('cmp-combined').textContent = (combRounded>=0?'減少 ':'增加 ') + Math.abs(combRounded).toFixed(1) + ' kg';
+      $('cmp-weight').textContent = (weightRounded>=0?'減少 ':'增加 ') + Math.abs(weightRounded).toFixed(1) + ' kg';
+
+      const diff = weightRounded - combRounded; // >0: 體重減少比脂肪+肌肉減少的加總還多(可能含水分流失); <0: 脂肪+肌肉減少比體重減少還多
+      const diffAbs = Math.abs(Number(diff.toFixed(1)));
+      const diffEl = $('cmp-diff');
+      const noteEl = $('cmp-diff-note');
+      if(diffAbs < 0.05){
+        diffEl.textContent = '幾乎一致 (0.0 kg)';
+        diffEl.className = 'stat-value flat';
+        noteEl.textContent = '體重減少幅度與脂肪+肌肉減少總和相符。';
+      } else if(diff > 0){
+        diffEl.textContent = '體重減少多出 ' + diffAbs.toFixed(1) + ' kg';
+        diffEl.className = 'stat-value pos';
+        noteEl.textContent = '這部分差額可能來自水分或其他成分變化。';
+      } else {
+        diffEl.textContent = '脂肪+肌肉減少多出 ' + diffAbs.toFixed(1) + ' kg';
+        diffEl.className = 'stat-value neg';
+        noteEl.textContent = '脂肪與肌肉減少的總和超過實際體重減少,可能有水分或其他成分增加抵銷。';
+      }
+    }
+  }
+
+  function groupByMonth(){
+    const map = {};
+    entries.forEach(en=>{
+      const k = monthKey(en.date);
+      if(!map[k]) map[k]=[];
+      map[k].push(en);
+    });
+    return map;
+  }
+  function groupByYear(){
+    const map = {};
+    entries.forEach(en=>{
+      const k = yearKey(en.date);
+      if(!map[k]) map[k]=[];
+      map[k].push(en);
+    });
+    return map;
+  }
+
+  function renderMonthly(){
+    const map = groupByMonth();
+    const keys = Object.keys(map).sort();
+    const tbody1 = $('monthly-tbody');
+    const tbody2 = $('monthly-tbody-2');
+    tbody1.innerHTML=''; tbody2.innerHTML='';
+    $('monthly-empty').style.display = keys.length? 'none':'block';
+    $('monthly-empty-2').style.display = keys.length? 'none':'block';
+
+    keys.forEach(k=>{
+      const list = map[k].slice().sort((a,b)=>a.date<b.date?-1:1);
+      const f = list[0], l = list[list.length-1];
+      function d(key){
+        if(f[key]==null||l[key]==null) return null;
+        return l[key]-f[key];
+      }
+      const dw=d('weight'), dbf=d('bodyFat'), dm=d('muscle'), dfw=d('fatWeight');
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${k}</td><td>${list.length}</td>
+        <td class="delta ${fmtDelta(dw,1,'kg').cls}">${fmtDelta(dw,1,'kg').text}</td>
+        <td class="delta ${fmtDelta(dbf,1,'%').cls}">${fmtDelta(dbf,1,'%').text}</td>
+        <td class="delta ${fmtDelta(dm,1,'kg').cls}">${fmtDelta(dm,1,'kg').text}</td>
+        <td class="delta ${fmtDelta(dfw,1,'kg').cls}">${fmtDelta(dfw,1,'kg').text}</td>`;
+      tbody1.appendChild(tr);
+
+      function avg(key){
+        const vals = list.map(x=>x[key]).filter(v=>v!==null&&v!==undefined);
+        if(!vals.length) return null;
+        return vals.reduce((a,b)=>a+b,0)/vals.length;
+      }
+      const tr2 = document.createElement('tr');
+      tr2.innerHTML = `<td>${k}</td><td>${fmt(avg('weight'),1,'kg')}</td><td>${fmt(avg('bodyFat'),1,'%')}</td><td>${fmt(avg('muscle'),1,'kg')}</td>`;
+      tbody2.appendChild(tr2);
+    });
+  }
+
+  function renderYearly(){
+    const map = groupByYear();
+    const keys = Object.keys(map).sort();
+    const tbody = $('yearly-tbody');
+    tbody.innerHTML = '';
+    $('yearly-empty').style.display = keys.length? 'none':'block';
+    keys.forEach(k=>{
+      const list = map[k].slice().sort((a,b)=>a.date<b.date?-1:1);
+      const f = list[0], l = list[list.length-1];
+      function d(key){
+        if(f[key]==null||l[key]==null) return null;
+        return l[key]-f[key];
+      }
+      const dw=d('weight'), dbf=d('bodyFat'), dm=d('muscle'), dfw=d('fatWeight');
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${k}</td><td>${list.length}</td>
+        <td class="delta ${fmtDelta(dw,1,'kg').cls}">${fmtDelta(dw,1,'kg').text}</td>
+        <td class="delta ${fmtDelta(dbf,1,'%').cls}">${fmtDelta(dbf,1,'%').text}</td>
+        <td class="delta ${fmtDelta(dm,1,'kg').cls}">${fmtDelta(dm,1,'kg').text}</td>
+        <td class="delta ${fmtDelta(dfw,1,'kg').cls}">${fmtDelta(dfw,1,'kg').text}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  const metricSelect = $('metric-select');
+  FIELDS.forEach(f=>{
+    const opt = document.createElement('option');
+    opt.value = f.key; opt.textContent = f.label + (f.unit? ' ('+f.unit+')':'');
+    metricSelect.appendChild(opt);
+  });
+  metricSelect.value = 'weight';
+  metricSelect.addEventListener('change', ()=>{ metricKey = metricSelect.value; renderChart(); });
+
+  document.querySelectorAll('#group-seg button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('#group-seg button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      groupMode = btn.dataset.group;
+      renderChart();
+      renderCompareChart();
+    });
+  });
+
+  function aggregatedPoints(){
+    if(groupMode==='day'){
+      return entries.filter(e=>e[metricKey]!==null && e[metricKey]!==undefined)
+        .map(e=>({label:e.date, value:e[metricKey]}));
+    }
+    const map = groupMode==='month' ? groupByMonth() : groupByYear();
+    const keys = Object.keys(map).sort();
+    return keys.map(k=>{
+      const list = map[k].slice().sort((a,b)=>a.date<b.date?-1:1);
+      const last = [...list].reverse().find(e=>e[metricKey]!==null && e[metricKey]!==undefined);
+      return {label:k, value: last ? last[metricKey] : null};
+    }).filter(p=>p.value!==null);
+  }
+
+  function chartReady(){ return typeof Chart !== 'undefined'; }
+  function showChartMessage(canvasId, message){
+    const canvas = $(canvasId);
+    if(!canvas || !canvas.parentElement) return;
+    const box = canvas.parentElement;
+    box.querySelectorAll('.chart-message').forEach(el=>el.remove());
+    canvas.style.display = 'none';
+    const msg = document.createElement('div');
+    msg.className = 'chart-message';
+    msg.textContent = message;
+    box.appendChild(msg);
+  }
+  function restoreChartCanvas(canvasId){
+    const canvas = $(canvasId);
+    if(!canvas || !canvas.parentElement) return null;
+    canvas.parentElement.querySelectorAll('.chart-message').forEach(el=>el.remove());
+    canvas.style.display = 'block';
+    return canvas;
+  }
+
+  function renderChart(){
+    if(chart){ chart.destroy(); chart=null; }
+    if(!chartReady()){
+      console.error('Chart.js failed to load');
+      showChartMessage('trend-chart','圖表元件載入失敗，請重新整理頁面。');
+      return;
+    }
+    const points = aggregatedPoints();
+    if(!points.length){
+      showChartMessage('trend-chart','尚無資料可繪製趨勢圖。');
+      return;
+    }
+    const canvas = restoreChartCanvas('trend-chart');
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if(!ctx) return;
+    const f = FIELD_MAP[metricKey];
+    chart = new Chart(ctx, {
+      type:'line',
+      data:{
+        labels: points.map(p=>p.label),
+        datasets:[{
+          label: f.label + (f.unit? ' ('+f.unit+')':''),
+          data: points.map(p=>p.value),
+          borderColor:'#2F6F62', backgroundColor:'rgba(47,111,98,0.12)',
+          pointBackgroundColor:'#2F6F62', pointRadius:3, tension:0.3, fill:true
+        }]
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{family:'IBM Plex Mono'},maxRotation:0,autoSkip:true}},y:{grid:{color:'#E4E7E0'},ticks:{font:{family:'IBM Plex Mono'}}}}}
+    });
+    requestAnimationFrame(()=>chart && chart.resize());
+  }
+
+  let compareChart = null;
+  function aggregatedSeries(key){
+    if(groupMode==='day'){
+      return entries.filter(e=>e[key]!==null && e[key]!==undefined)
+        .map(e=>({label:e.date, value:e[key]}));
+    }
+    const map = groupMode==='month' ? groupByMonth() : groupByYear();
+    const keys = Object.keys(map).sort();
+    return keys.map(k=>{
+      const list = map[k].slice().sort((a,b)=>a.date<b.date?-1:1);
+      const last = [...list].reverse().find(e=>e[key]!==null && e[key]!==undefined);
+      return {label:k, value: last ? last[key] : null};
+    });
+  }
+
+  function renderCompareChart(){
+    if(compareChart){ compareChart.destroy(); compareChart=null; }
+    if(!chartReady()){
+      console.error('Chart.js failed to load');
+      showChartMessage('compare-chart','圖表元件載入失敗，請重新整理頁面。');
+      return;
+    }
+    const weightSeries = aggregatedSeries('weight');
+    if(!weightSeries.length){
+      showChartMessage('compare-chart','尚無資料可繪製趨勢比較圖。');
+      return;
+    }
+    const canvas = restoreChartCanvas('compare-chart');
+    if(!canvas) return;
+    const labels = weightSeries.map(p=>p.label);
+    const fatSeries = aggregatedSeries('fatWeight').filter(p=>labels.includes(p.label));
+    const muscleSeries = aggregatedSeries('muscle').filter(p=>labels.includes(p.label));
+    const fatMap = Object.fromEntries(fatSeries.map(p=>[p.label,p.value]));
+    const muscleMap = Object.fromEntries(muscleSeries.map(p=>[p.label,p.value]));
+    const ctx = canvas.getContext('2d');
+    if(!ctx) return;
+    compareChart = new Chart(ctx,{
+      type:'line',
+      data:{labels,datasets:[
+        {label:'體重 (kg)',data:weightSeries.map(p=>p.value),borderColor:'#2F6F62',backgroundColor:'rgba(47,111,98,0.08)',pointRadius:3,tension:0.3,fill:false,yAxisID:'yWeight'},
+        {label:'脂肪重量 (kg)',data:labels.map(l=>l in fatMap?fatMap[l]:null),borderColor:'#C1583A',backgroundColor:'rgba(193,88,58,0.08)',pointRadius:3,tension:0.3,fill:false,spanGaps:true,yAxisID:'yBody'},
+        {label:'骨骼肌 (kg)',data:labels.map(l=>l in muscleMap?muscleMap[l]:null),borderColor:'#B8862F',backgroundColor:'rgba(184,134,47,0.08)',pointRadius:3,tension:0.3,fill:false,spanGaps:true,yAxisID:'yBody'}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top',labels:{font:{family:'Inter',size:12},boxWidth:12}}},scales:{x:{grid:{display:false},ticks:{font:{family:'IBM Plex Mono'},maxRotation:0,autoSkip:true}},yWeight:{type:'linear',position:'left',grid:{color:'#E4E7E0'},ticks:{font:{family:'IBM Plex Mono'}},title:{display:true,text:'體重 (kg)'}},yBody:{type:'linear',position:'right',grid:{drawOnChartArea:false},ticks:{font:{family:'IBM Plex Mono'}},title:{display:true,text:'脂肪 / 骨骼肌 (kg)'}}}}
+    });
+    requestAnimationFrame(()=>compareChart && compareChart.resize());
+  }
+
+  function renderAll(){
+    renderTable();
+    renderGoal();
+    renderCumulative();
+    renderMonthly();
+    renderYearly();
+  }
+
+  (async function init(){
+    await loadData();
+    renderAll();
+  })();
+})();
+</script>
+</body>
+</html>
