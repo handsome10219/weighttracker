@@ -3,6 +3,9 @@
   "name": "weighttracker-excel",
   "main": "worker/index.js",
   "compatibility_date": "2026-08-13",
+  "rules": [
+    { "type": "Data", "globs": ["**/*.xlsx"], "fallthrough": true }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
