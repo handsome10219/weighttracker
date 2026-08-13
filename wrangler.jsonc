@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "weighttracker-excel",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-08-13",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "weighttracker-db",
+      "database_id": "181a1a40-6dea-4299-9379-1975e8663819"
+    }
+  ]
+}
