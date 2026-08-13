@@ -1,0 +1,14 @@
+{
+  "name": "weighttracker-cloudflare",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "fflate": "^0.8.2"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
